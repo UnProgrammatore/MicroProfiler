@@ -1,6 +1,6 @@
 namespace MicroProfilerTests.TestingAssets;
 
-public enum TestProfilingStepsForProfilerReuseTestExclusively
+public enum TestProfilingStepsParallel
 {
     FirstStep,
     SecondStep,

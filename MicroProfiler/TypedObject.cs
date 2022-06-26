@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 
 namespace MicroProfiler
 {
@@ -40,5 +41,6 @@ namespace MicroProfiler
             _profilers.Release(profiler);
         }
 
+        internal static readonly AsyncLocal<IProfiler<T>> AsyncLocalProfiler = new AsyncLocal<IProfiler<T>>();
     }
 }

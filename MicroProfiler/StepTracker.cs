@@ -6,8 +6,9 @@ namespace MicroProfiler
     internal class StepTracker<T> : IDisposable, IWithSequentialId where T : System.Enum
     {
         private Profiler<T> _currentProfiler;
-        private TimeSpan _startTimepan;
-        private T _stepType;
+        public TimeSpan StartTimepan { get; private set; }
+        public T StepType { get; private set; }
+        public int Index { get; private set; }
         public int Id { get; }
 
         public StepTracker(int id)
@@ -15,16 +16,17 @@ namespace MicroProfiler
             Id = id;   
         }
 
-        public void StartFor(Profiler<T> profiler, TimeSpan startTimestamp, T stepType)
+        public void StartFor(Profiler<T> profiler, TimeSpan startTimestamp, T stepType, int index)
         {
             _currentProfiler = profiler;
-            _startTimepan = startTimestamp;
-            _stepType = stepType;
+            StartTimepan = startTimestamp;
+            StepType = stepType;
+            Index = index;
         }
 
         public void Dispose()
         {
-            _currentProfiler.ReturnFromStep(_startTimepan, _stepType);
+            _currentProfiler.ReturnFromStep(this);
             _currentProfiler = null;
         }
     }

@@ -9,6 +9,7 @@ namespace MicroProfiler
         private readonly ExpandingArray<ProfiledStep<T>> _profiledSteps = new ExpandingArray<ProfiledStep<T>>(16);
         private int _currentIndex = -1; 
         private readonly Stopwatch _stopwatch = new Stopwatch();
+        private AsyncLocal<int> _withinIndex = new AsyncLocal<int>();
 
         private readonly int _id;
         int IWithSequentialId.Id => _id;
@@ -25,6 +26,7 @@ namespace MicroProfiler
             _stopwatch.Restart();
             _currentIndex = -1;
             _profilingLevel = profilingLevel;
+            _withinIndex.Value = -1;
         }
 
         public IDisposable Step(T stepType, ProfilingLevel profilingLevel = ProfilingLevel.Standard)
@@ -32,7 +34,12 @@ namespace MicroProfiler
             if(_profilingLevel > profilingLevel)
                 return DummyDisposable.Instance;
             var stepTracker = TypedObject<T>.GetOneStepTracker();
-            stepTracker.StartFor(this, _stopwatch.Elapsed, stepType);
+            var newIndex = Interlocked.Increment(ref _currentIndex);
+            stepTracker.StartFor(this, _stopwatch.Elapsed, stepType, newIndex);
+            var step = TypedObject<T>.GetOneProfiledStep();
+            _profiledSteps[newIndex] = step;
+            step.SetWithin(_withinIndex.Value);
+            _withinIndex.Value = newIndex;
             return stepTracker;
         }
         public void Dispose()
@@ -46,13 +53,12 @@ namespace MicroProfiler
             return (_profiledSteps.Array, _currentIndex + 1);
         }
 
-        public void ReturnFromStep(TimeSpan startTime, T stepType) 
+        public void ReturnFromStep(StepTracker<T> stepTracker) 
         {
             var endTime = _stopwatch.Elapsed;
-            var step = TypedObject<T>.GetOneProfiledStep();
-            step.SetTo(stepType, startTime, endTime);
-            var newIndex = Interlocked.Increment(ref _currentIndex);
-            _profiledSteps[newIndex] = step;
+            var step = _profiledSteps[stepTracker.Index];
+            step.SetTo(stepTracker.StepType, stepTracker.StartTimepan, endTime);
+            _withinIndex.Value = step.WithinIndex;
         }
     }
 }
